@@ -12,6 +12,10 @@ However, the operating systems in which this is expected to function are:
 
 - Debian (Buster)
 
+Additionally, it has been tested with the GoPro versions:
+
+- HERO 8
+
 ## Compilation
 
 The application compilation is managed by `make`, through a self documenting makefile.
