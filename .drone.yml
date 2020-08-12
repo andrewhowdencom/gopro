@@ -1,0 +1,43 @@
+---
+kind: "pipeline"
+type: "kubernetes"
+name: "analyse"
+steps:
+  - name: "lint"
+    image: "golangci/golangci-lint:v1.30.0"
+    commands:
+      - golangci-lint run
+  - name: "test"
+    image: "golang:1.15.0-buster"
+    commands:
+      # Tests
+      - go test -race ./...
+trigger:
+  event:
+    - pull_request
+
+---
+kind: "pipeline"
+name: "publish"
+steps:
+  - name: "app"
+    image: "golang:1.15.0-buster"
+    commands:
+      # Tests
+      - go build -o dist/fs/usr/bin/goprod cmd/goprod/main.go
+      - go build -o dist/fs/usr/bin/goproctl cmd/goproctl/main.go
+  - name: "deb"
+    image: "littleman/fpm:latest"
+    commands:
+        - make deb
+  - name: publish
+    image: plugins/github-release
+    settings:
+      api_key:
+        from_secret: GITHUB_TOKEN
+      files: dist/*.deb
+
+trigger:
+  ref:
+    include:
+      - refs/tags/**
