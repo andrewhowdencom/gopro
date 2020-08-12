@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"log"
 	"os"
 
-	"github.com/dedelala/sysexits"
+	"github.com/andrewhowdencom/gopro/internal/hotplug"
 	"github.com/spf13/cobra"
 
 	"github.com/spf13/viper"
@@ -16,8 +18,24 @@ var rootCmd = &cobra.Command{
 	Use:   "goprod",
 	Short: "Daemon that manages the connection to the GoPro",
 	Run: func(cmd *cobra.Command, args []string) {
-		cmd.Help()
-		os.Exit(sysexits.Usage)
+		h, e := hotplug.New()
+		if e != nil {
+			log.Fatal(e.Error())
+		}
+
+		c, e := h.Listen(context.Background())
+		if e != nil {
+			log.Fatalf("unable to listen for events: %s", e.Error())
+		}
+
+		for event := range c {
+			switch event.Type {
+			case hotplug.Connected:
+				fmt.Printf("Yeah! Found GoPro with ID %s\n", event.Entity.ID)
+			case hotplug.Disconnected:
+				fmt.Printf("Boo! Camera with id %s went away\n", event.Entity.ID)
+			}
+		}
 	},
 }
 
