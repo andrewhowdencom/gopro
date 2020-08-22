@@ -4,6 +4,7 @@ go 1.14
 
 require (
 	github.com/dedelala/sysexits v0.0.0-20170927115716-3d3abae01efc
+	github.com/hashicorp/go-retryablehttp v0.6.7
 	github.com/jkeiser/iter v0.0.0-20200628201005-c8aa0ae784d1 // indirect
 	github.com/jochenvg/go-udev v0.0.0-20171110120927-d6b62d56d37b
 	github.com/mitchellh/go-homedir v1.1.0

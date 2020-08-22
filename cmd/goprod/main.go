@@ -5,10 +5,14 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/andrewhowdencom/gopro/internal/hotplug"
+	"github.com/andrewhowdencom/gopro/internal/webcam"
 	"github.com/spf13/cobra"
 
+	"github.com/dedelala/sysexits"
 	"github.com/spf13/viper"
 )
 
@@ -18,6 +22,7 @@ var rootCmd = &cobra.Command{
 	Use:   "goprod",
 	Short: "Daemon that manages the connection to the GoPro",
 	Run: func(cmd *cobra.Command, args []string) {
+		cameras := make(map[string]*webcam.Webcam)
 		h, e := hotplug.New()
 		if e != nil {
 			log.Fatal(e.Error())
@@ -28,10 +33,43 @@ var rootCmd = &cobra.Command{
 			log.Fatalf("unable to listen for events: %s", e.Error())
 		}
 
+		// Bind signals, register shutdown
+		sigs := make(chan os.Signal, 1)
+		signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+		go func() {
+			sig := <-sigs
+			fmt.Println()
+			fmt.Println(sig)
+
+			for _, camera := range cameras {
+				camera.Stop()
+			}
+
+			os.Exit(sysexits.OK)
+		}()
+
 		for event := range c {
 			switch event.Type {
 			case hotplug.Connected:
 				fmt.Printf("Yeah! Found GoPro with ID %s\n", event.Entity.ID)
+
+				// Create a webcam entity
+				w, e := webcam.New(event.Entity, webcam.WithDevice("/dev/video2"))
+				if e != nil {
+					fmt.Printf("failed to load camera: %s", e.Error())
+					break
+				}
+
+				// Start the webcam
+				if e := w.Start(); e != nil {
+					fmt.Printf("failed to start camera: %s", e.Error())
+					break
+				}
+
+				cameras[event.Entity.ID] = w
+
+				fmt.Printf("Yeah! Found / Started GoPro with ID %s\n", event.Entity.ID)
+
 			case hotplug.Disconnected:
 				fmt.Printf("Boo! Camera with id %s went away\n", event.Entity.ID)
 			}
